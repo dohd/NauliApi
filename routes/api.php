@@ -18,59 +18,83 @@ use Illuminate\Support\Facades\Route;
 
 // login user
 Route::post('login', function (Request $request) {
-    $password = $request->password;
-    // break input into username or password
-    $input = $request->username;
-    $username = '';
-    $phone = '';
+    $request->validate([
+        'username' => 'required',
+        'password' => 'required',
+    ]);
 
-    if ($username) {
-        // 
-    } elseif ($phone) {
-        // 
-    }
+    $input = $request->only('username', 'password');
 
-    if (Auth::attempt(['name' => 'John Doe', 'password' => '1234'])) {
+    try {
+        $phone_attempt = Auth::attempt(['phone' => trim($input['username']), 'password' => $input['password']]);
+        $username_attempt = Auth::attempt(['username' => trim($input['username']), 'password' => $input['password']]);
+        if (!$phone_attempt && !$username_attempt) {
+            trigger_error('Invalid login details!');
+        }
+
         $user = Auth::user();
         $success['token'] = $user->createToken(config('app.name'))->accessToken;
         return response()->json(compact('success'));
-    }
-    
-    return response()->json(['error' => 'Unauthorized'], 401);
+    } catch (\Throwable $th) {
+        return response()->json(['error' => $th->getMessage()], 401);
+    }    
 });
 
 // register user
 Route::post('register', function (Request $request) {
-    $name = $request->name;
-    $phone = $request->phone;
-    $error_status = 500;
+    $request->validate([
+        'name' => 'required',
+        'phone' => 'required',
+        'password' => 'required',
+    ]);
+
+    $input = $request->only('name', 'phone', 'password');
 
     try {
-        $phone_exists = User::where('phone', $phone)->exists();
+        $phone_exists = User::where('phone', $input['phone'])->exists();
         if ($phone_exists) {
             $error_status = 409;
             trigger_error('Phone Number exists! Try a different number.');
         }
 
-        // generate unique username
-        $username = str_replace(' ', '_', strtolower($name)) . rand(100, 999);
-        // generate unique password
-        $password = $phone;
+        // generate random username
+        $username = explode(' ', trim($input['name']));
+        $username_exists = User::where('username', strtolower($username[0]))->exists();
+        if ($username_exists) {
+            foreach (range(0, 10000) as $n) {
+                $mod_1 = strtolower($username[0]) . rand(10, 999);
+                $username_exists = User::where('username', $mod_1)->exists();
+                if (!$username_exists) {
+                    $username = $mod_1;
+                    break;
+                }
+            }
+            if ($username_exists) 
+                $username = strtolower($username[1][0]) . $mod_1 . rand(10, 999);
+        } 
+        if (is_array($username)) $username = strtolower($username[0]);
 
+        // generate random password
+        // $chars = 'qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890';
+        // $password = substr(str_shuffle($chars), 0, 5);
+        // error_log(print_r($password, 1));
+
+        // send otp to phone via sms service
+        $otp = rand(100000, 99999);
+
+        // on success create user
         $user = User::create([
-            'name' => $name,
-            'phone' => $phone,
+            'name' => $input['name'],
+            'phone' => $input['phone'],
             'username' => $username,
-            'password' => $password,
+            'password' => $input['password'],
         ]);
 
-        // send password to phone via sms service
-
-        $register['user'] = $user; 
         $register['token'] = $user->createToken(config('app.name'))->accessToken;
         return response()->json($register);
     } catch (\Throwable $th) {
-        return response()->json(['error' => $th->getMessage()], $error_status);
+        // log error
+        return response()->json(['error' => $th->getMessage()], @$error_status ?: 500);
     }
 });
 
