@@ -18,9 +18,12 @@ use Illuminate\Support\Facades\Route;
 
 // login user
 Route::post('login', function (Request $request) {
-    // check if username/phone_number
+    $password = $request->password;
+    // break input into username or password
+    $input = $request->username;
     $username = '';
     $phone = '';
+
     if ($username) {
         // 
     } elseif ($phone) {
@@ -61,6 +64,8 @@ Route::post('register', function (Request $request) {
             'password' => $password,
         ]);
 
+        // send password to phone via sms service
+
         $register['user'] = $user; 
         $register['token'] = $user->createToken(config('app.name'))->accessToken;
         return response()->json($register);
@@ -69,9 +74,44 @@ Route::post('register', function (Request $request) {
     }
 });
 
+// password forgot pin
+Route::post('password/forgot', function (Request $request) {
+    $input = $request->username;
+    // break input into username or password
+    $input = $request->username;
+    $username = '';
+    $phone = '';
+
+    if ($username) {
+        // generate otp
+    } elseif ($phone) {
+        // generate otp 
+    }
+
+    // send otp using sms service
+    
+    return response()->json(['success' => 1]);
+});
+
+// password reset
+Route::post('password/reset', function (Request $request) {
+    $password = $request->password;
+    $otp = $request->otp;
+    try {
+        // decrypt otp
+
+        // update user loaded in otp
+
+    } catch (\Throwable $th) {
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
+
+    return response()->json(['success' => 1]);
+});
+
 Route::group(['middleware' => 'auth:api'], function () {
     // update user
-    Route::patch('users/{user}/update', function(Request $request, User $user) {
+    Route::patch('users/{user}', function(Request $request, User $user) {
         $name = $request->name;
         $phone = $request->phone;
         $username = $request->username;
@@ -132,13 +172,18 @@ Route::group(['middleware' => 'auth:api'], function () {
 
             // generate unique username
             $username = str_replace(' ', '_', strtolower($name)) . rand(100, 999);
+            // generate unique password
+            $password = $phone;
 
             $conductor = User::create([
                 'name' => $name,
                 'phone' => $phone,
                 'username' => $username,
-                'password' => $phone,
+                'password' => $password,
             ]);
+
+            // send password to phone via sms service
+
             return response()->json(compact('success'));
         } catch (\Throwable $th) {
             return response()->json(['error' => $th->getMessage()], $error_status);
@@ -189,8 +234,8 @@ Route::group(['middleware' => 'auth:api'], function () {
     });
 
     // fetch user conductors
-    Route::get('users/{user}/conductors', function (Request $request, User $user) {
-        $conductors = User::where('rel_id', $user->id)->get();
+    Route::get('conductors', function (Request $request) {
+        $conductors = User::where('rel_id', $request->user_id)->get();
 
         $conductors = [
             "Fuxi Isak",
@@ -216,17 +261,20 @@ Route::group(['middleware' => 'auth:api'], function () {
             'active' => rand(0,1),
         ], $conductors);
 
-        return response()->json(compact('conductors'));
+        return response()->json($conductors);
     });
 
-    // fetch account balance
-    Route::get('account_balance', function (Request $request) {
+    // fetch user account balance
+    Route::get('account_balance', function (Request $request, User $user) {
         $balance = ['amount' => number_format(20000, 2), 'currency' => 'Ksh. '];
-        return response()->json(compact('balance'));
+
+        // fetch balance from daraja api 
+
+        return response()->json($balance);
     });
 
-    // fetch passenger deposits
-    Route::get('passenger_deposits', function (Request $request) {
+    // fetch user deposits
+    Route::get('deposits', function (Request $request) {
         $deposits = [
             "Fuxi Isak",
             "Lola Azra",
@@ -254,11 +302,13 @@ Route::group(['middleware' => 'auth:api'], function () {
             'time' => date('g:i a'),
         ], $deposits);
 
-        return response()->json(compact('deposits'));
+        // fetch deposits from daraja api
+
+        return response()->json($deposits);
     });
 
     // fetch account withdrawals
-    Route::get('account_withdrawals', function (Request $request) {
+    Route::get('withdrawals', function (Request $request) {
         $withdrawals = array_map(fn($v) => [
             'id' => rand(1000,9999),
             'amount' => number_format(100, 2),
@@ -267,6 +317,32 @@ Route::group(['middleware' => 'auth:api'], function () {
             'time' => date('g:i a'),
         ], range(1, 20));
 
-        return response()->json(compact('withdrawals'));
+        // fetch withdrawals from daraja api
+
+        return response()->json($withdrawals);
+    });
+
+    // generate pre-withdrawal pin
+    Route::post('withdrawals/otp', function(Request $request) {
+        $user = User::find($request->user_id);
+        
+        // generate otp
+
+        // send otp using sms service
+
+        return response()->json(['success' => 1]);
+    });
+
+    // confirm amount withdrawal
+    Route::post('withdrawals/confirm', function(Request $request) {
+        $user_id = $request->user_id;
+        $otp = $request->otp;
+        $amount = $request->amount;
+
+        $user = User::find($request->user_id);
+
+        // api call to daraja api to confirm withdrawal
+
+        return response()->json(['success' => 1]);
     });
 });
