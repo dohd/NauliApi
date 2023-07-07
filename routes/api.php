@@ -100,37 +100,44 @@ Route::post('register', function (Request $request) {
 
 // password forgot pin
 Route::post('password/forgot', function (Request $request) {
+    $request->validate(['username' => 'required']);
     $input = $request->username;
-    // break input into username or password
-    $input = $request->username;
-    $username = '';
-    $phone = '';
 
-    if ($username) {
-        // generate otp
-    } elseif ($phone) {
-        // generate otp 
+    try {
+        $user = User::where('username', $input['username'])
+            ->orWhere('phone', $input['username'])->first();
+        if (!$user) trigger_error('Username / Phone Number could not be found!');
+
+        foreach (range(0, 10000) as $n) {
+            $otp = rand(100000, 999999);
+            $otp_exists = User::where('pass_reset_otp', $otp)->exists();
+            if (!$otp_exists) break;
+        }
+        if ($otp_exists) $otp = rand(1000000, 9999999);
+        $user->update(['pass_reset_otp' => $otp]);
+
+        // send otp using sms service
+        
+        return response()->json(['message' => 'OTP generated successfully']);
+    } catch (\Throwable $th) {
+        return response()->json(['error' => $th->getMessage()], 500);
     }
-
-    // send otp using sms service
-    
-    return response()->json(['success' => 1]);
 });
 
 // password reset
 Route::post('password/reset', function (Request $request) {
+    $request->validate(['password' => 'required', 'otp' => 'required']);
     $password = $request->password;
     $otp = $request->otp;
+
     try {
-        // decrypt otp
+        $user = User::where('pass_reset_otp', $otp)->first();
+        if ($user) $user->update(['password' => $password]);
 
-        // update user loaded in otp
-
+        return response()->json(['message' => 'Password reset successfully']);
     } catch (\Throwable $th) {
         return response()->json(['error' => 'Unauthorized'], 401);
     }
-
-    return response()->json(['success' => 1]);
 });
 
 Route::group(['middleware' => 'auth:api'], function () {
