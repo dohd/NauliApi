@@ -98,7 +98,7 @@ Route::post('register', function (Request $request) {
     }
 });
 
-// password forgot pin
+// password pre-reset OTP code
 Route::post('password/forgot', function (Request $request) {
     $request->validate(['username' => 'required']);
     $input = $request->username;
@@ -108,19 +108,17 @@ Route::post('password/forgot', function (Request $request) {
             ->orWhere('phone', $input['username'])->first();
         if (!$user) trigger_error('Username / Phone Number could not be found!');
 
-        foreach (range(0, 10000) as $n) {
-            $otp = rand(100000, 999999);
-            $otp_exists = User::where('pass_reset_otp', $otp)->exists();
-            if (!$otp_exists) break;
-        }
-        if ($otp_exists) $otp = rand(1000000, 9999999);
-        $user->update(['pass_reset_otp' => $otp]);
+        // otp expiry 120 seconds
+        $user->update([
+            'pass_reset_otp' => rand(100000, 999999), 
+            'reset_otp_exp' => date('Y-m-d H:i:s', strtotime(date("Y-m-d H:i:s")) + 120),
+        ]);
 
         // send otp using sms service
         
         return response()->json(['message' => 'OTP generated successfully']);
     } catch (\Throwable $th) {
-        return response()->json(['error' => $th->getMessage()], 500);
+        return response()->json(['error' => $th->getMessage()], 401);
     }
 });
 
@@ -132,11 +130,17 @@ Route::post('password/reset', function (Request $request) {
 
     try {
         $user = User::where('pass_reset_otp', $otp)->first();
-        if ($user) $user->update(['password' => $password]);
+        if (!$user) trigger_error('Invalid OTP code!');
 
+        // verify otp expiry
+        $exp_diff = strtotime(date('Y-m-d H:i:s')) - strtotime($user->pass_otp_exp);
+        if ($exp_diff > 0) trigger_error('Expired OTP code.');
+        
+        $user->update(['password' => $password]);
+    
         return response()->json(['message' => 'Password reset successfully']);
     } catch (\Throwable $th) {
-        return response()->json(['error' => 'Unauthorized'], 401);
+        return response()->json(['error' => $th->getMessage()], 401);
     }
 });
 
@@ -390,22 +394,25 @@ Route::group(['middleware' => 'auth:api'], function () {
         return response()->json($withdrawals);
     });
 
-    // generate pre-withdrawal pin
+    // generate pre-withdrawal OTP code
     Route::post('withdrawals/otp', function(Request $request) {
         $request->validate(['user_id' => 'required']);
 
         try {
-            $user = User::findOrFail($request->user_id);
-            // generate otp
-            $otp = rand(1000000, 999999);
-            if ($user->withdraw_otp != $otp) $user->update(['withdraw_otp' => $otp]);
-            else $user->update(['withdraw_otp' => rand(1000000, 999999)]);
+            $user = User::find($request->user_id);
+            if (!$user) trigger_error('Unauthorized!');
+
+            // otp expiry 120 seconds
+            $user->update([
+                'withdraw_otp' => rand(100000, 999999), 
+                'withdraw_otp_exp' => date('Y-m-d H:i:s', strtotime(date("Y-m-d H:i:s")) + 120),
+            ]);
             
             // send otp using sms service
 
             return response()->json(['message' => 'OTP Generated successfully']);
         } catch (\Throwable $th) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+            return response()->json(['error' => $th->getMessage()], 401);
         }
     });
 
@@ -416,17 +423,21 @@ Route::group(['middleware' => 'auth:api'], function () {
             'amount' => 'required',
             'otp' => 'required',
         ]);
-
         $input = $request->only('user_id', 'amount', 'otp');
 
         try {
-            $user = User::findOrFail($input['user_id']);
+            $user = User::find($input['user_id']);
+            if (!$user) trigger_error('Unauthorized!');
+
+            // verify otp expiry
+            $exp_diff = strtotime(date('Y-m-d H:i:s')) - strtotime($user->withdraw_otp_exp);
+            if ($exp_diff > 0) trigger_error('Expired OTP code.');
 
             // trigger B2C transaction in daraja api
 
             return response()->json(['message' => 'Withdrawal transaction processed successfully']);
         } catch (\Throwable $th) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+            return response()->json(['error' => $th->getMessage()], 401);
         }
     });
 });
