@@ -143,54 +143,56 @@ Route::post('password/reset', function (Request $request) {
 Route::group(['middleware' => 'auth:api'], function () {
     // update user
     Route::patch('users/{user}', function(Request $request, User $user) {
-        $name = $request->name;
-        $phone = $request->phone;
-        $username = $request->username;
-        $password = $request->password;
-        $error_status = 500;
-        try {
-            if ($user->rel_id) {
-                $error_status = 401;
-                trigger_error('Unauthorized');
-            }
+        if (!$user->id || $user->rel_id) {
+            $error_status = 401;
+            trigger_error('Unauthorized');
+        }
 
+        $name = $request->name;
+        $username = $request->username;
+        $phone = $request->phone;
+        $password = $request->password;
+
+        try {
             if ($username) {
-                $username_exists = User::where('id', '!=', $user->id)
+                $exists = User::where('id', '!=', $user->id)
                     ->where('username', 'LIKE', "%{$username}%")->exists();
-                if ($username_exists) {
+                if ($exists) {
                     $error_status = 409;
                     trigger_error('Username exists! Try a different name.');
                 }
                 $updated = $user->update(compact('username'));
             } elseif ($phone) {
-                $phone_exists = User::where('id', '!=', $user->id)
+                $exists = User::where('id', '!=', $user->id)
                     ->where('phone', $phone)->exists();
-                if ($phone_exists) {
+                if ($exists) {
                     $error_status = 409;
                     trigger_error('Phone Number exists! Try a different number.');
                 }
+                $updated = $user->update(compact('phone'));
             } elseif ($name) {
                 $updated = $user->update(compact('name'));
             } elseif ($password) {
                 $updated = $user->update(compact('password'));
             }
 
-            return response()->json(compact('updated'));
+            return response()->json(['message' => 'User updated successfully']);
         } catch (\Throwable $th) {
-            return response()->json(['error' => $th->getMessage()], $error_status);
+            return response()->json(['error' => $th->getMessage()], @$error_status ?: 500);
         }
     });
 
     // store conductor
     Route::post('conductors', function (Request $request) {
+        $request->validate(['user_id' => 'required']);
+
         $user_id = $request->user_id;
         $name = $request->name;
         $phone = $request->phone;
-        $error_status = 500;
 
         try {
-            $is_conductor = User::where('id', $user_id)->whereNotNull('rel_id')->exists();
-            if ($is_conductor) {
+            $main_user = User::find($user_id);
+            if (!$main_user) {
                 $error_status = 401;
                 trigger_error('Unauthorized');
             }
@@ -201,33 +203,58 @@ Route::group(['middleware' => 'auth:api'], function () {
                 trigger_error('Phone Number exists! Try a different number.');
             }
 
-            // generate unique username
-            $username = str_replace(' ', '_', strtolower($name)) . rand(100, 999);
-            // generate unique password
-            $password = $phone;
+            // generate random username
+            $username = explode(' ', trim($name));
+            $username_exists = User::where('username', strtolower($username[0]))->exists();
+            if ($username_exists) {
+                foreach (range(0, 10000) as $n) {
+                    $mod_1 = strtolower($username[0]) . rand(10, 999);
+                    $username_exists = User::where('username', $mod_1)->exists();
+                    if (!$username_exists) {
+                        $username = $mod_1;
+                        break;
+                    }
+                }
+                if ($username_exists) 
+                    $username = strtolower($username[1][0]) . $mod_1 . rand(10, 999);
+            } 
+            if (is_array($username)) $username = strtolower($username[0]);
 
-            $conductor = User::create([
+            // generate random password
+            $chars = 'qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890';
+            $password = substr(str_shuffle($chars), 0, 5);
+            // error_log(print_r($password, 1));
+
+            $user = User::create([
                 'name' => $name,
                 'phone' => $phone,
                 'username' => $username,
                 'password' => $password,
             ]);
 
-            // send password to phone via sms service
+            if ($user) {
+                // send password via sms service
 
-            return response()->json(compact('success'));
+            }
+
+            return response()->json(['message' => 'User created successfully']);
         } catch (\Throwable $th) {
-            return response()->json(['error' => $th->getMessage()], $error_status);
+            return response()->json(['error' => $th->getMessage()], @$error_status ?: 500);
         }
     });
 
     // update conductor
     Route::patch('conductors/{user}', function(Request $request, User $user) {
+        if (!$user->id || !$user->rel_id) {
+            $error_status = 401;
+            trigger_error('Unauthorized');
+        }
+
         $name = $request->name;
         $phone = $request->phone;
         $username = $request->username;
         $password = $request->password;
-        $error_status = 500;
+        
         try {
             if ($name) {
                 if ($user->rel_id) {
@@ -240,35 +267,36 @@ Route::group(['middleware' => 'auth:api'], function () {
                     $error_status = 401;
                     trigger_error('Unauthorized');
                 }
-                $phone_exists = User::where('id', '!=', $user->id)
+                $exists = User::where('id', '!=', $user->id)
                     ->where('phone', $phone)->exists();
-                if ($phone_exists) {
+                if ($exists) {
                     $error_status = 409;
-                    trigger_error('Phone Number exists! Try a different number.');
+                    trigger_error('Phone Number exists! Try a different phone number.');
                 }
+                $updated = $user->update(compact('phone'));
             } elseif ($username) {
-                $username_exists = User::where('id', '!=', $user->id)
-                    ->where('username', 'LIKE', "%{$username}%")->exists();
-                if ($username_exists) {
+                $exists = User::where('id', '!=', $user->id)
+                    ->where('username', $username)->exists();
+                if ($exists) {
                     $error_status = 409;
-                    trigger_error('Username exists! Try a different name.');
+                    trigger_error('Username exists! Try a different username.');
                 }
                 $updated = $user->update(compact('username'));
             } elseif ($password) {
                 $updated = $user->update(compact('password'));
             }
             
-            return response()->json(compact('updated'));
+            return response()->json(['message' => 'User updated successfully']);
         } catch (\Throwable $th) {
-            return response()->json(['error' => $th->getMessage()], $error_status);
+            return response()->json(['error' => $th->getMessage()], @$error_status ?: 500);
         }
     });
 
     // fetch user conductors
-    Route::get('conductors', function (Request $request) {
-        $conductors = User::where('rel_id', $request->user_id)->get();
+    Route::get('users/{user_id}/conductors', function (Request $request, $user_id) {
+        $users = User::where('rel_id', $user_id)->get();
 
-        $conductors = [
+        $users = [
             "Fuxi Isak",
             "Lola Azra",
             "Sujata Devyn",
@@ -285,27 +313,34 @@ Route::group(['middleware' => 'auth:api'], function () {
             "Ida Roman",
             "Sherry Argider",
         ];
-        $conductors = array_map(fn($v) => [
+        $users = array_map(fn($v) => [
             'id' => rand(1000,9999),
             'username' => $v,
             'phone' => '07' . rand(10000000, 99999999),
             'active' => rand(0,1),
-        ], $conductors);
+        ], $users);
 
-        return response()->json($conductors);
+        return response()->json($users);
     });
 
     // fetch user account balance
-    Route::get('account_balance', function (Request $request, User $user) {
-        $balance = ['amount' => number_format(20000, 2), 'currency' => 'Ksh. '];
+    Route::get('users/{user_id}/balance', function (Request $request, $user_id) {
+        $user = User::find($user_id);
 
-        // fetch balance from daraja api 
+        $balance = [
+            'amount' => number_format(20000, 2), 
+            'currency' => 'Ksh. '
+        ];
+
+        // trigger B2C transaction in daraja api
 
         return response()->json($balance);
     });
 
     // fetch user deposits
-    Route::get('deposits', function (Request $request) {
+    Route::get('users/{user_id}/deposits', function (Request $request, $user_id) {
+        $user = User::find($user_id);
+
         $deposits = [
             "Fuxi Isak",
             "Lola Azra",
@@ -333,13 +368,15 @@ Route::group(['middleware' => 'auth:api'], function () {
             'time' => date('g:i a'),
         ], $deposits);
 
-        // fetch deposits from daraja api
+        // trigger B2C transaction in daraja api
 
         return response()->json($deposits);
     });
 
     // fetch account withdrawals
-    Route::get('withdrawals', function (Request $request) {
+    Route::get('users/{user_id}/withdrawals', function (Request $request, $user_id) {
+        $user = User::find($user_id);
+
         $withdrawals = array_map(fn($v) => [
             'id' => rand(1000,9999),
             'amount' => number_format(100, 2),
@@ -348,32 +385,48 @@ Route::group(['middleware' => 'auth:api'], function () {
             'time' => date('g:i a'),
         ], range(1, 20));
 
-        // fetch withdrawals from daraja api
+        // trigger B2C transaction in daraja api
 
         return response()->json($withdrawals);
     });
 
     // generate pre-withdrawal pin
     Route::post('withdrawals/otp', function(Request $request) {
-        $user = User::find($request->user_id);
-        
-        // generate otp
+        $request->validate(['user_id' => 'required']);
 
-        // send otp using sms service
+        try {
+            $user = User::findOrFail($request->user_id);
+            // generate otp
+            $otp = rand(1000000, 999999);
+            if ($user->withdraw_otp != $otp) $user->update(['withdraw_otp' => $otp]);
+            else $user->update(['withdraw_otp' => rand(1000000, 999999)]);
+            
+            // send otp using sms service
 
-        return response()->json(['success' => 1]);
+            return response()->json(['message' => 'OTP Generated successfully']);
+        } catch (\Throwable $th) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
     });
 
     // confirm amount withdrawal
     Route::post('withdrawals/confirm', function(Request $request) {
-        $user_id = $request->user_id;
-        $otp = $request->otp;
-        $amount = $request->amount;
+        $request->validate([
+            'user_id' => 'required',
+            'amount' => 'required',
+            'otp' => 'required',
+        ]);
 
-        $user = User::find($request->user_id);
+        $input = $request->only('user_id', 'amount', 'otp');
 
-        // api call to daraja api to confirm withdrawal
+        try {
+            $user = User::findOrFail($input['user_id']);
 
-        return response()->json(['success' => 1]);
+            // trigger B2C transaction in daraja api
+
+            return response()->json(['message' => 'Withdrawal transaction processed successfully']);
+        } catch (\Throwable $th) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
     });
 });
