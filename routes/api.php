@@ -334,7 +334,7 @@ Route::group(['middleware' => 'auth:api'], function () {
         $user = User::find($user_id);
 
         $balance = [
-            'amount' => number_format(300, 2), 
+            'amount' => number_format(800, 2), 
             'currency' => 'Ksh. '
         ];
         $is_charged_cashout = false;
@@ -350,28 +350,25 @@ Route::group(['middleware' => 'auth:api'], function () {
             $amount_inc = floatval(str_replace(',', '', $balance['amount']));
             $fee_amount = round($amount_inc * $charge_config->pc_rate/100, 2);
             $amount_exc = $amount_inc - $fee_amount;
-        
+
             $cashout_rates = CashoutRate::get();
             foreach ($cashout_rates as $band) {
-                $band->rate = round($band->rate);
                 if ($amount_inc >= $band->lower_class && $amount_inc <= $band->upper_class) {
-                    if ($fee_amount <= $band->rate) {
+                    if (round($fee_amount) <= round($band->rate)) {
                         $lower_retainer = floor($fee_amount * $charge_config->pc_retainer/100);
                         $net_amount = $amount_exc + $lower_retainer;
                         $fee_amount -= $lower_retainer;
-                    } elseif ($fee_amount > $band->rate) {
+                    } elseif (round($fee_amount) > round($band->rate)) {
                         // address sharp variance in range
                         if ($amount_inc > 200 && $amount_inc < 500) {
-                            $net_amount = $amount_exc;
                             $lower_retainer = floor($fee_amount * $charge_config->pc_retainer/100);
-                            $net_amount += $lower_retainer;
+                            $net_amount = $amount_exc + $lower_retainer;
                             $fee_amount -= $lower_retainer;
                         } else {
                             // apply rates from table
-                            $net_amount = $amount_exc + $band->rate;
                             $fee_amount -= $band->rate;
                             $lower_retainer = floor($fee_amount * $charge_config->pc_retainer/100);
-                            $net_amount += $lower_retainer;
+                            $net_amount = $amount_exc + $band->rate + $lower_retainer;
                             $fee_amount -= $lower_retainer;
                         }
                     }
