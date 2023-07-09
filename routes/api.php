@@ -355,24 +355,23 @@ Route::group(['middleware' => 'auth:api'], function () {
             foreach ($cashout_rates as $band) {
                 if ($amount_inc >= $band->lower_class && $amount_inc <= $band->upper_class) {
                     if (round($fee_amount) <= round($band->rate)) {
-                        $lower_retainer = floor($fee_amount * $charge_config->pc_retainer/100);
-                        $net_amount = $amount_exc + $lower_retainer;
-                        $fee_amount -= $lower_retainer;
+                        $retainer = floor($fee_amount * $charge_config->pc_retainer/100);
+                        $net_amount = $amount_exc + $retainer;
+                        $fee_amount -= $retainer;
                     } elseif (round($fee_amount) > round($band->rate)) {
-                        // address sharp variance in range
+                        // address sharp variance in rate bwetween 200 and 500
                         if ($amount_inc > 200 && $amount_inc < 500) {
-                            $lower_retainer = floor($fee_amount * $charge_config->pc_retainer/100);
-                            $net_amount = $amount_exc + $lower_retainer;
-                            $fee_amount -= $lower_retainer;
+                            $retainer = floor($fee_amount * $charge_config->pc_retainer/100);
+                            $net_amount = $amount_exc + $retainer;
+                            $fee_amount -= $retainer;
                         } else {
                             // apply rates from table
                             $fee_amount -= $band->rate;
-                            $lower_retainer = floor($fee_amount * $charge_config->pc_retainer/100);
-                            $net_amount = $amount_exc + $band->rate + $lower_retainer;
-                            $fee_amount -= $lower_retainer;
+                            $retainer = floor($fee_amount * $charge_config->pc_retainer/100);
+                            $net_amount = $amount_exc + $band->rate + $retainer;
+                            $fee_amount -= $retainer;
                         }
                     }
-                    
                     $net_amount = floor($net_amount);
                     $fee_amount = ceil($fee_amount);
                     $balance = array_replace($balance, [
