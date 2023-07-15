@@ -23,6 +23,12 @@ class User extends Authenticatable
         'username',
         'phone',
         'password',
+        'rel_id',
+        'active',
+        'pass_reset_otp',
+        'pass_otp_exp',
+        'withdraw_otp',
+        'withdraw_otp_exp',
     ];
 
     /**
@@ -42,7 +48,7 @@ class User extends Authenticatable
      */
     public function setPasswordAttribute($password)
     {
-        if (@$password) $this->attributes['password'] = bcrypt($password);
+        $this->attributes['password'] = bcrypt($password);
     }
 
     /**

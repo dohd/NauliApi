@@ -38,7 +38,7 @@ Route::group(['middleware' => 'auth:api'], function () {
     Route::patch('conductors/{user}', [ConductorsController::class, 'update']);
     Route::post('conductors', [ConductorsController::class, 'store']);
 
-    // consume daraja api
+    // daraja api callbacks
     Route::post('deposits/store', [MpesaController::class, 'store_deposit']);
     Route::post('withdrawals/store', [MpesaController::class, 'store_withdrawal']);
 });

@@ -6,6 +6,7 @@ use App\Models\CashoutRate;
 use App\Models\ChargeConfig;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class UsersController extends Controller
 {
@@ -207,13 +208,13 @@ class UsersController extends Controller
     public function withdrawal_otp(Request $request, User $user) {
         try {
             if (!$user) trigger_error('Unauthorized!');
-
+            
             // otp expiry 120 seconds
             $user->update([
                 'withdraw_otp' => rand(100000, 999999), 
                 'withdraw_otp_exp' => date('Y-m-d H:i:s', strtotime(date("Y-m-d H:i:s")) + 120),
-            ]);
-            
+            ]); 
+
             // send otp using sms service
 
             return response()->json(['message' => 'OTP Generated successfully']);
@@ -227,7 +228,6 @@ class UsersController extends Controller
      */
     public function confirm_withdrawal(Request $request, User $user) {
         $request->validate(['amount' => 'required', 'otp' => 'required']);
-        $input = $request->only('user_id', 'amount', 'otp');
 
         try {
             if (!$user) trigger_error('Unauthorized!');
@@ -235,12 +235,20 @@ class UsersController extends Controller
             // verify otp expiry
             $exp_diff = strtotime(date('Y-m-d H:i:s')) - strtotime($user->withdraw_otp_exp);
             if ($exp_diff > 0) trigger_error('Expired OTP code.');
-
+            dd(url('/') . '/api/withdrawals/store');
             // trigger B2C transaction in daraja api
+            $res = Http::withHeaders([
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+                'Authorization' => 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiYzk2YzNmMzRiZjM5OGZmYjExYzEwZTdmMjBlZTg4YTQ1MGJkNjVjYjFkZDQ0Zjc0ZDVmNjI5NTg5YjY2MWNhOGI4MWE0NzEzMjgwODdjYzYiLCJpYXQiOjE2ODk0MTk4MjcuMDAwNzIxLCJuYmYiOjE2ODk0MTk4MjcuMDAwNzI1LCJleHAiOjE3MjEwNDIyMjYuOTg3NjM0LCJzdWIiOiIxIiwic2NvcGVzIjpbXX0.OSTP0T0f4Gb9E0oUObS13Rjf1PwDsrlWMV6gQEVYYUbgjDQAhED9Oe4D7xpH_pLPAQPwg6iH_G_R7KRH9GjQWDQYpY-w5pcw8g8IwxVyFs_uyo2N4vB5STsieQwMiriqyMRRkIbtZ63H66UNa2XJ65D0nYIxmGcAYDSqwt3aYuxhN3L28bbrpdBstYrBfAndSd9jzaagLX0K2evziUXN3nLYPjedjZFtXwWFdt1Pq98ZAkvGPg7g2tmjwD4OrgTblpOIhOabAbS189F8gvQuSrKNlHvg-EyFNsRJp735tWnoR1c6uiSGgLw0fyaM7cBWzyIpT7QVrM7RZ_-4ces01aGGwnkVvLXUA6ZG3MLMUTVs6MKelKxcnQyDwd90pyzPfk_dS9LsOLJO6167EaDB6GTCVfijaMCajn-jwoX76ewM7rAfWlxs5v3JFhqbx4EsQPn3Xa-WHGTvtuYZobP58VRCm6pQB9iQj2igcqIJ6QAoPVgLxaJkGRpX2N97xTKEnyCJHVU-FSP70IFfa6VNBqGuS8_Xulmy9NTQ8JT9bQBOheE07W36vYoMlQb3wRDnpiPO-eGaH9De5UFX7M2bprR88shRi6s6NkTdJEmPFI0DWpzXTiK_2W--kWvYkHsBjyuGFL0FVwpnNsznDOKodyxjnofBtg3SRCZIwcIGEqs',
+            ])
+            ->post(url('/') . '/api/withdrawals/store', [
+                'amount' => $request->amount,
+            ]);
 
-            return response()->json(['message' => 'Withdrawal transaction processed successfully']);
+            return response()->json(['message' => 'Withdrawal procesing initiated successfully']);
         } catch (\Throwable $th) {
-            return response()->json(['error' => $th->getMessage()], 401);
+            return errorHandler(null, $th, 0);
         }
     }
 }

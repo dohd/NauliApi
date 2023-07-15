@@ -73,11 +73,11 @@ class MpesaController extends Controller
                 'ResultCode' => '0',
                 'TransactionID' => 'LHG31AA5TX',
                 'TransactionReceipt' => 'LHG31AA5TX',
-                'TransactionAmount' => '400',
+                'TransactionAmount' => $request->amount ?: '400',
                 'B2CWorkingAccountAvailableFunds' => '20000',
                 'B2CUtilityAccountAvailableFunds' => ' 25000',
                 'TransactionCompletedDateTime' => '01.08.2018 16:12:12',
-                'ReceiverPartyPublicName' => '2540720020022 - John Doe',
+                'ReceiverPartyPublicName' => '254720020022 - John Doe',
                 'B2CRecipientIsRegisteredCustomer' => 'Y',
             ];
     
