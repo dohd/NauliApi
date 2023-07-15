@@ -26,19 +26,19 @@ Route::post('password/reset', [AuthController::class, 'password_reset']);
 
 Route::group(['middleware' => 'auth:api'], function () {
     // users
-    Route::patch('users/{user}', [UsersController::class, 'update']);
     Route::get('users/{user}/conductors', [UsersController::class, 'user_conductors']);
     Route::get('users/{user}/balance', [UsersController::class, 'account_balance']);
     Route::get('users/{user}/deposits', [UsersController::class, 'user_deposits']);
     Route::get('users/{user}/withdrawals', [UsersController::class, 'user_withdrawals']);
     Route::post('users/{user}/withdrawals/otp', [UsersController::class, 'withdrawal_otp']);
     Route::post('users/{user}/withdrawals/confirm', [UsersController::class, 'confirm_withdrawal']);
+    Route::patch('users/{user}', [UsersController::class, 'update']);
 
     // conductors
-    Route::post('conductors', [ConductorsController::class, 'store']);
     Route::patch('conductors/{user}', [ConductorsController::class, 'update']);
+    Route::post('conductors', [ConductorsController::class, 'store']);
 
-    // consume mpesa api
+    // consume daraja api
     Route::post('deposits/store', [MpesaController::class, 'store_deposit']);
     Route::post('withdrawals/store', [MpesaController::class, 'store_withdrawal']);
 });

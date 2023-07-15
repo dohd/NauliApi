@@ -44,4 +44,14 @@ class User extends Authenticatable
     {
         if (@$password) $this->attributes['password'] = bcrypt($password);
     }
+
+    /**
+     * Get account owner attribute.
+     *
+     * @param [string] $password
+     */
+    public function getOwnerIdAttribute()
+    {
+        return $this->rel_id ?: $this->id;
+    }
 }
