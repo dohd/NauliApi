@@ -3,6 +3,7 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -13,7 +14,7 @@ class Handler extends ExceptionHandler
      * @var array<int, class-string<Throwable>>
      */
     protected $dontReport = [
-        //
+        ValidationException::class,
     ];
 
     /**
@@ -34,8 +35,30 @@ class Handler extends ExceptionHandler
      */
     public function register()
     {
+        // custom error handling
+        $this->reportable(function (CustomException $e) {
+            return false;
+        });
+
+        // laravel validation error handling 
+        $this->renderable(function (ValidationException $e) {
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => $e->validator->errors()->getMessages(),
+            ], 422);
+        });
+
+        // default error handling
         $this->reportable(function (Throwable $e) {
-            //
+            $sys_error = $e->getMessage() . ' {user_id:'. auth()->user()->id . '} at ' . $e->getFile() . ':' . $e->getLine();
+            \Illuminate\Support\Facades\Log::error($sys_error);
+            printLog($sys_error);
+        });
+        $this->renderable(function (Throwable $e) {
+            return response()->json([
+                'message' => 'Internal server error! Please try again later',
+                'errors' => [],
+            ], 500);
         });
     }
 }

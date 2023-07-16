@@ -125,14 +125,15 @@ if (!function_exists('printLog')) {
 }
 
 if (!function_exists('errorHandler')) {
-    function errorHandler($msg, $e, $code)
+    function errorHandler($msg, $e)
     {
         if ($e instanceof Throwable) {
             $sys_error = $e->getMessage() . ' {user_id:'. auth()->user()->id . '} at ' . $e->getFile() . ':' . $e->getLine();
             \Illuminate\Support\Facades\Log::error($sys_error);
             printLog($sys_error);
         }
-        return response()->json(['error' => $msg ?: 'Internal server error! Please try again later.'], $code ?: 500);
+        
+        return response()->json(['error' => 'Internal server error! Please try again later.'], 500);
     }
 }
 
