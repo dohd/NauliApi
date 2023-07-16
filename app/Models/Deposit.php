@@ -59,4 +59,14 @@ class Deposit extends Model
             $builder->where('owner_id', auth()->user()->owner_id);
         });
     }
+
+    // get trans_amount attribute
+    public function getTransAmountAttribute($value) {
+        return +$value;
+    }
+
+    // get time attribute
+    public function getCreatedAtAttribute($value) {
+        return dateFormat($value, 'd-m-Y H:i a');
+    }
 }
