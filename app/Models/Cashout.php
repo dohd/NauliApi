@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
+use Attribute;
 use Illuminate\Database\Eloquent\Model;
 
-class Withdrawal extends Model
+class Cashout extends Model
 {
-    protected $table = 'withdrawals';
+    protected $table = 'cashouts';
 
     /**
      * The attributes that are mass assignable.
@@ -58,5 +59,15 @@ class Withdrawal extends Model
         static::addGlobalScope('owner_id', function ($builder) {
             $builder->where('owner_id', auth()->user()->owner_id);
         });
+    }
+
+    // get trans_amount attribute
+    public function getTransAmountAttribute($value) {
+        return +$value;
+    }
+
+    // get time attribute
+    public function getCreatedAtAttribute($value) {
+        return dateFormat($value, 'd-m-Y H:i a');
     }
 }
