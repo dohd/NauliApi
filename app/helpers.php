@@ -93,6 +93,14 @@ if (!function_exists('databaseDate')) {
     }
 }
 
+if (!function_exists('databaseTimestamp')) {
+    function databaseTimestamp($datetime='')
+    {
+        if (!$datetime) return date('Y-m-d H:i:s');
+        return date('Y-m-d H:i:s', strtotime($datetime));
+    }
+}
+
 if (!function_exists('databaseArray')) {
     function databaseArray($input=[])
     {
@@ -145,5 +153,53 @@ if (!function_exists('tidCode')) {
             if ($prefixInst) $prefix = "{$prefixInst->code}{$prefixInst->sep}";
         }
         return $prefix . sprintf('%0'.$count.'d', $num);
+    }
+}
+
+if (!function_exists('processNetBalance')) {
+    function processNetBalance($amount=0) 
+    {
+        $net_balance = ['amount' => 0, 'fee' => 0];
+        if (!$amount) return $net_balance;
+
+        // handle cashout limit
+        $charge_config = \App\Models\ChargeConfig::first();
+        $limit_amount = $charge_config->daily_free_cashout_limit_amount;
+        $free_cashouts_count =  \App\Models\Cashout::where('trans_amount', '<=', $limit_amount)->count();
+        if ($free_cashouts_count <= $charge_config->daily_free_cashout_limit) 
+            return ['amount' => $amount, 'fee' => 0];
+
+        // apply cashout fee
+        $amount_inc = $amount;
+        $fee_amount = round($amount_inc * $charge_config->pc_rate/100, 2);
+        $amount_exc = $amount_inc - $fee_amount;
+        $cashout_rates = \App\Models\CashoutRate::get();
+        foreach ($cashout_rates as $bracket) {
+            if ($amount_inc >= $bracket->lower_limit && $amount_inc <= $bracket->upper_limit) {
+                if (round($fee_amount) <= round($bracket->rate)) {
+                    $retainer = floor($fee_amount * $charge_config->pc_retainer/100);
+                    $net_amount = $amount_exc + $retainer;
+                    $fee_amount -= $retainer;
+                } elseif (round($fee_amount) > round($bracket->rate)) {
+                    // address sharp variance in rate bwetween 200 and 500
+                    if ($amount_inc > 200 && $amount_inc < 500) {
+                        $retainer = floor($fee_amount * $charge_config->pc_retainer/100);
+                        $net_amount = $amount_exc + $retainer;
+                        $fee_amount -= $retainer;
+                    } else {
+                        // apply rates from table
+                        $fee_amount -= $bracket->rate;
+                        $retainer = floor($fee_amount * $charge_config->pc_retainer/100);
+                        $net_amount = $amount_exc + $bracket->rate + $retainer;
+                        $fee_amount -= $retainer;
+                    }
+                }
+                $net_amount = floor($net_amount);
+                $fee_amount = ceil($fee_amount);
+                $net_balance = ['amount' => $net_amount, 'fee' => $fee_amount];
+                break;
+            } 
+        }
+        return $net_balance;
     }
 }
