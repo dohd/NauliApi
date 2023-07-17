@@ -165,7 +165,11 @@ if (!function_exists('processNetBalance')) {
         // handle cashout limit
         $charge_config = \App\Models\ChargeConfig::first();
         $limit_amount = $charge_config->daily_free_cashout_limit_amount;
-        $free_cashouts_count =  \App\Models\Cashout::where('trans_amount', '<=', $limit_amount)->count();
+        $today = date('Y-m-d');
+        $free_cashouts_count =  \App\Models\Transaction::whereHas('cashout')
+        ->where('cashout', '<=', $limit_amount)->where('fee', 0)
+        ->where('created_at', 'LIKE', "%{$today}%")
+        ->count();
         if ($free_cashouts_count <= $charge_config->daily_free_cashout_limit) 
             return ['amount' => $amount, 'fee' => 0];
 
