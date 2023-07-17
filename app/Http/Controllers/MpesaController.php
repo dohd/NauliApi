@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Cashout;
 use App\Models\Deposit;
+use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -40,20 +41,22 @@ class MpesaController extends Controller
         $deposit = Deposit::create($data);
 
         // compute wallet balance
-        $last_cashout = Cashout::latest()->first();
-        if ($last_cashout) {
-            $deposit_amount = Deposit::where('created_at', '>', databaseTimestamp($last_cashout->created_at))->sum('trans_amount');
-            $curr_amount = $last_cashout->wallet_balance + $deposit_amount;
-            $net_balance = processNetBalance($curr_amount);
+        $last_transaction = Transaction::latest()->first();
+        $data = [
+            'owner_id' => $deposit->owner_id,
+            'deposit_id' => $deposit->id,
+            'deposit' => $deposit->trans_amount,
+            'balance' => $deposit->trans_amount, 
+            'net_balance' => $deposit->trans_amount,
+        ];
+        if ($last_transaction) {
+            $data['balance'] = $last_transaction->balance + $deposit->trans_amount;
+            $data['net_balance'] = $data['balance'];
+            Transaction::create($data);
         } else {
-            $curr_amount = Deposit::sum('trans_amount');
-            $net_balance = processNetBalance($curr_amount);
+            Transaction::create($data);
         }
-        $deposit->update([
-            'wallet_balance' => $net_balance['amount'], 
-            'service_fee' => $net_balance['fee']
-        ]);
-
+         
         DB::commit();
         
         return response()->json($deposit);
@@ -95,13 +98,23 @@ class MpesaController extends Controller
         $cashout = Cashout::create($data);
         
         // compute wallet balance
-        $last_deposit = Deposit::where('created_at', '<=', databaseTimestamp($cashout->created_at))->latest()->first();
-        $net_balance = processNetBalance($cashout->trans_amount);
-        $wallet_balance = $last_deposit->wallet_balance - $net_balance['amount'] - $net_balance['fee'];
-        $cashout->update([
-            'wallet_balance' => $wallet_balance, 
-            'service_fee' => $net_balance['fee']
-        ]);
+        $processed_amount = processNetBalance($cashout->trans_amount);
+        $data = [
+            'owner_id' => $cashout->owner_id,
+            'cashout_id' => $cashout->id,
+            'cashout' => $cashout->trans_amount,
+            'balance' => $cashout->trans_amount,
+            'fee' => $processed_amount['fee'],
+            'net_balance' => $processed_amount['amount'],
+        ];
+        $last_transaction = Transaction::latest()->first();
+        if ($last_transaction) {
+            $data['balance'] = $last_transaction->balance - $cashout->trans_amount;
+            $data['net_balance'] = $last_transaction->net_balance - $data['net_balance'];
+            Transaction::create($data);
+        } else {
+            Transaction::create($data);
+        }
 
         DB::commit();
             
