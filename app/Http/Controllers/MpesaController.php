@@ -41,17 +41,19 @@ class MpesaController extends Controller
         $deposit = Deposit::create($data);
 
         // compute wallet balance
-        $last_transaction = Transaction::latest()->first();
         $data = [
             'owner_id' => $deposit->owner_id,
             'deposit_id' => $deposit->id,
             'deposit' => $deposit->trans_amount,
             'balance' => $deposit->trans_amount, 
-            'net_balance' => $deposit->trans_amount,
+            'fee' => processNetBalance($deposit->trans_amount)['fee'],
+            'net_balance' => processNetBalance($deposit->trans_amount)['amount'],
         ];
+        $last_transaction = Transaction::latest()->first();
         if ($last_transaction) {
-            $data['balance'] = $last_transaction->balance + $deposit->trans_amount;
-            $data['net_balance'] = $data['balance'];
+            $data['balance'] = $last_transaction->balance + $data['deposit'];
+            $data['fee'] = processNetBalance($data['balance'])['fee'];
+            $data['net_balance'] = processNetBalance($data['balance'])['amount'];
             Transaction::create($data);
         } else {
             Transaction::create($data);
@@ -98,19 +100,19 @@ class MpesaController extends Controller
         $cashout = Cashout::create($data);
         
         // compute wallet balance
-        $processed_amount = processNetBalance($cashout->trans_amount);
         $data = [
             'owner_id' => $cashout->owner_id,
             'cashout_id' => $cashout->id,
             'cashout' => $cashout->trans_amount,
             'balance' => $cashout->trans_amount,
-            'fee' => $processed_amount['fee'],
-            'net_balance' => $processed_amount['amount'],
+            'fee' => processNetBalance($cashout->trans_amount)['fee'],
+            'net_balance' => processNetBalance($cashout->trans_amount)['amount'],
         ];
         $last_transaction = Transaction::latest()->first();
         if ($last_transaction) {
-            $data['balance'] = $last_transaction->balance - $cashout->trans_amount;
-            $data['net_balance'] = $last_transaction->net_balance - $data['net_balance'];
+            $data['balance'] = $last_transaction->balance - $data['cashout'];
+            $data['fee'] = processNetBalance($data['balance'])['fee'];
+            $data['net_balance'] = processNetBalance($data['balance'])['amount'];
             Transaction::create($data);
         } else {
             Transaction::create($data);

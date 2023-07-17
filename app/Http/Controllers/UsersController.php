@@ -6,6 +6,7 @@ use App\Exceptions\CustomException;
 use App\Models\Cashout;
 use App\Models\Conductor;
 use App\Models\Deposit;
+use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -84,19 +85,11 @@ class UsersController extends Controller
      */
     public function wallet_balance(Request $request)
     {
-        $deposit = Deposit::latest()->first();
-        $cashout = Cashout::latest()->first();
+        $net_balance = 0;
+        $transaction = Transaction::latest()->first();
+        if ($transaction && $transaction->net_balance > 0)
+            $net_balance = $transaction->net_balance;
 
-        if ($deposit && $cashout) {
-            if (strtotime($cashout->created_at) > strtotime($deposit->created_at)) {
-                $net_balance = ['amount' => $cashout->wallet_balance, 'fee' => $cashout->service_fee];
-            } else {
-                $net_balance = ['amount' => $deposit->wallet_balance, 'fee' => $deposit->service_fee];
-            }
-        } elseif ($deposit) {
-            $net_balance = ['amount' => $deposit->wallet_balance, 'fee' => $deposit->service_fee];
-        }
-
-        return response()->json($net_balance);
+        return response()->json(compact('net_balance'));
     }
 }
