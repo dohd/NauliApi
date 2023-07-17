@@ -6,6 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Transaction extends Model
 {
+    use TransactionRelationship;
+
+    /**
+     * 
+     */
     protected $table = 'transactions';
 
     /**
@@ -73,6 +78,9 @@ class Transaction extends Model
         return +$value;
     }
     public function getBalanceAttribute($value) {
+        return +$value;
+    }
+    public function getNetBalanceAttribute($value) {
         return +$value;
     }
 }
