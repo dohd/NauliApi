@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Attribute;
 use Illuminate\Database\Eloquent\Model;
 
 class Cashout extends Model
@@ -64,10 +63,5 @@ class Cashout extends Model
     // get trans_amount attribute
     public function getTransAmountAttribute($value) {
         return +$value;
-    }
-
-    // get time attribute
-    public function getCreatedAtAttribute($value) {
-        return dateFormat($value, 'd-m-Y H:i a');
     }
 }

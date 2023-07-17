@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\CustomException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Auth;
 
 class CashoutsController extends Controller
 {
@@ -16,16 +16,17 @@ class CashoutsController extends Controller
      */
     public function generate_otp(Request $request) 
     {     
-        $user = auth()->user();
+        $user = Auth::user();
         if ($user->rel_id) throw new CustomException('Unauthorized');
 
-        // otp expiry 120 seconds
+        // otp expiry 180 seconds
         $user->update([
             'withdraw_otp' => rand(100000, 999999), 
-            'withdraw_otp_exp' => date('Y-m-d H:i:s', strtotime(date("Y-m-d H:i:s")) + 120),
+            'withdraw_otp_exp' => date('Y-m-d H:i:s', strtotime(date("Y-m-d H:i:s")) + 180),
         ]); 
 
         // send otp using sms service
+
 
         return response()->json(['message' => 'OTP Generated successfully']);
     }
@@ -40,8 +41,7 @@ class CashoutsController extends Controller
 
         $user = auth()->user();
         // verify otp
-        if ($request->otp != $user->withdraw_otp_exp) 
-            throw new CustomException('Invalid OTP code.');
+        if ($request->otp != $user->withdraw_otp) throw new CustomException('Invalid OTP code.');
         $exp_diff = strtotime(date('Y-m-d H:i:s')) - strtotime($user->withdraw_otp_exp);
         if ($exp_diff > 0) throw new CustomException('Expired OTP code.');
         

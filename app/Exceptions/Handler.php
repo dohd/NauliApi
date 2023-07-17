@@ -3,6 +3,7 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -50,15 +51,12 @@ class Handler extends ExceptionHandler
 
         // default error handling
         $this->reportable(function (Throwable $e) {
-            $sys_error = $e->getMessage() . ' {user_id:'. auth()->user()->id . '} at ' . $e->getFile() . ':' . $e->getLine();
-            \Illuminate\Support\Facades\Log::error($sys_error);
-            printLog($sys_error);
+            $sys_message = $e->getMessage() . ' {user_id:'. auth()->user()->id . '} at ' . $e->getFile() . ':' . $e->getLine();
+            printLog($sys_message);
+            Log::error($sys_message);
         });
         $this->renderable(function (Throwable $e) {
-            return response()->json([
-                'message' => 'Internal server error! Please try again later',
-                'errors' => [],
-            ], 500);
+            return response()->json(['message' => 'Oops! Something went wrong. Please try again later'], 500);
         });
     }
 }

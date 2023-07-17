@@ -64,9 +64,4 @@ class Deposit extends Model
     public function getTransAmountAttribute($value) {
         return +$value;
     }
-
-    // get time attribute
-    public function getCreatedAtAttribute($value) {
-        return dateFormat($value, 'd-m-Y H:i a');
-    }
 }
