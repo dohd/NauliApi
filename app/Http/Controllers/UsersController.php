@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 
 class UsersController extends Controller
 {
+    use DarajaApi;
     /**
      * Update User Resource
      * 
@@ -84,7 +85,7 @@ class UsersController extends Controller
      * 
      */
     public function wallet_balance(Request $request)
-    {
+    {        
         $net_balance = 0;
         $transaction = Transaction::latest()->first();
         if ($transaction && $transaction->net_balance > 0)

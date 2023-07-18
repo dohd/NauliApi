@@ -12,6 +12,65 @@ use Illuminate\Support\Facades\DB;
 class MpesaController extends Controller
 {
     /**
+     * Store Cashout
+     * 
+     */
+    function cashout(Request $request)
+    {
+        // $result = $this->dummyData()['cashout'];
+        return response()->json(['success' => 1, 'data' => $request->all()]);
+
+        $data = [
+            'conversation_id' => $result['ConversationId'],
+            'origin_conversation_id' => $result['OriginatorConversationId'],
+            'result_desc' => $result['ResultDesc'],
+            'result_type' => $result['ResultType'],
+            'result_code' => $result['ResultCode'],
+            'trans_id' => $result['TransactionID'],
+            'trans_receipt' => $result['TransactionReceipt'],
+            'trans_amount' => floatval($request->amount ?: $result['TransactionAmount']),
+            'working_account_balance' => (float) $result['B2CWorkingAccountAvailableFunds'],
+            'utility_account_balance' => (float) $result['B2CUtilityAccountAvailableFunds'],
+            'trans_completed_datetime' => $result['TransactionCompletedDateTime'],
+            'recepient_name' => $result['ReceiverPartyPublicName'],
+            'is_registered_customer' => $result['B2CRecipientIsRegisteredCustomer'],
+        ];
+
+        DB::beginTransaction();
+
+        $recepient_name = explode('-', $data['recepient_name']);
+        if (@$recepient_name[0]) {
+            $phone = trim($recepient_name[0]);
+            $user = User::where('phone', $phone)->first();
+            if ($user) $data['owner_id'] = $user->id;
+        }
+        $cashout = Cashout::create($data);
+        
+        // compute wallet balance
+        $data = [
+            'owner_id' => $cashout->owner_id,
+            'cashout_id' => $cashout->id,
+            'cashout' => $cashout->trans_amount,
+            'balance' => $cashout->trans_amount,
+            'fee' => processNetBalance($cashout->trans_amount)['fee'],
+            'net_balance' => processNetBalance($cashout->trans_amount)['amount'],
+        ];
+        $last_transaction = Transaction::latest()->first();
+        if ($last_transaction) {
+            $data['balance'] = $last_transaction->balance - $data['cashout'];
+            $data['fee'] = processNetBalance($data['balance'])['fee'];
+            $data['net_balance'] = processNetBalance($data['balance'])['amount'];
+            Transaction::create($data);
+        } else {
+            Transaction::create($data);
+        }
+
+        DB::commit();
+            
+        return response()->json($cashout);
+    }
+
+    /**
      * Store Deposit
      * 
      */
@@ -62,65 +121,6 @@ class MpesaController extends Controller
         DB::commit();
         
         return response()->json($deposit);
-    }
-
-    /**
-     * Store Cashout
-     * 
-     */
-    function cashout(Request $request)
-    {
-        // api call result
-        $result = $this->dummyData()['cashout'];
-
-        $data = [
-            'conversation_id' => $result['ConversationId'],
-            'origin_conversation_id' => $result['OriginatorConversationId'],
-            'result_desc' => $result['ResultDesc'],
-            'result_type' => $result['ResultType'],
-            'result_code' => $result['ResultCode'],
-            'trans_id' => $result['TransactionID'],
-            'trans_receipt' => $result['TransactionReceipt'],
-            'trans_amount' => floatval($request->amount ?: $result['TransactionAmount']),
-            'working_account_balance' => (float) $result['B2CWorkingAccountAvailableFunds'],
-            'utility_account_balance' => (float) $result['B2CUtilityAccountAvailableFunds'],
-            'trans_completed_datetime' => $result['TransactionCompletedDateTime'],
-            'recepient_name' => $result['ReceiverPartyPublicName'],
-            'is_registered_customer' => $result['B2CRecipientIsRegisteredCustomer'],
-        ];
-
-        DB::beginTransaction();
-
-        $recepient_name = explode('-', $data['recepient_name']);
-        if (@$recepient_name[0]) {
-            $phone = trim($recepient_name[0]);
-            $user = User::where('phone', $phone)->first();
-            if ($user) $data['owner_id'] = $user->id;
-        }
-        $cashout = Cashout::create($data);
-        
-        // compute wallet balance
-        $data = [
-            'owner_id' => $cashout->owner_id,
-            'cashout_id' => $cashout->id,
-            'cashout' => $cashout->trans_amount,
-            'balance' => $cashout->trans_amount,
-            'fee' => processNetBalance($cashout->trans_amount)['fee'],
-            'net_balance' => processNetBalance($cashout->trans_amount)['amount'],
-        ];
-        $last_transaction = Transaction::latest()->first();
-        if ($last_transaction) {
-            $data['balance'] = $last_transaction->balance - $data['cashout'];
-            $data['fee'] = processNetBalance($data['balance'])['fee'];
-            $data['net_balance'] = processNetBalance($data['balance'])['amount'];
-            Transaction::create($data);
-        } else {
-            Transaction::create($data);
-        }
-
-        DB::commit();
-            
-        return response()->json($cashout);
     }
 
     public function dummyData() {

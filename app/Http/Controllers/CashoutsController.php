@@ -37,7 +37,7 @@ class CashoutsController extends Controller
      * 
      */
     public function process_cashout(Request $request) {
-        $request->validate(['amount' => 'required', 'otp' => 'required']);
+        $request->validate(['amount' => 'required']);
 
         // verify otp
         // if ($request->otp != auth()->user()->withdraw_otp) throw new CustomException('Invalid OTP code.');
@@ -45,8 +45,11 @@ class CashoutsController extends Controller
         // if ($exp_diff > 0) throw new CustomException('Expired OTP code.');
         
         // trigger B2C transaction (business payment)
-        $this->businessPayment($request->amount);
+        $response = $this->businessPayment($request->amount);
 
-        return response()->json(['message' => 'Cashout process initiated successfully']);
+        return response()->json([
+            'message' => 'Cashout process initiated successfully',
+            'data' => $response,
+        ]);
     }
 }

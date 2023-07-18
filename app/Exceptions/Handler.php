@@ -3,6 +3,7 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -15,7 +16,7 @@ class Handler extends ExceptionHandler
      * @var array<int, class-string<Throwable>>
      */
     protected $dontReport = [
-        ValidationException::class,
+        
     ];
 
     /**
@@ -41,6 +42,11 @@ class Handler extends ExceptionHandler
             return false;
         });
 
+        // http request exception handling 
+        $this->renderable(function (RequestException $e) {
+            return response()->json(['message' => 'Network error! Please try again later'], 400);
+        });
+
         // laravel validation error handling 
         $this->renderable(function (ValidationException $e) {
             return response()->json([
@@ -51,7 +57,7 @@ class Handler extends ExceptionHandler
 
         // default error handling
         $this->reportable(function (Throwable $e) {
-            $sys_message = $e->getMessage() . ' {user_id:'. auth()->user()->id . '} at ' . $e->getFile() . ':' . $e->getLine();
+            $sys_message = $e->getMessage() . ' {user_id:'. @auth()->user()->id . '} at ' . $e->getFile() . ':' . $e->getLine();
             printLog($sys_message);
             Log::error($sys_message);
         });

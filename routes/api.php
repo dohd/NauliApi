@@ -36,12 +36,12 @@ Route::group(['middleware' => 'auth:api'], function () {
     // conductors
     Route::patch('conductors/{user}', [ConductorsController::class, 'update']);
     Route::post('conductors', [ConductorsController::class, 'store']);
-
-    // cashouts
+    
+    // cashout process
     Route::post('cashouts/otp', [CashoutsController::class, 'generate_otp']);
-    Route::post('cashouts/process', [CashoutsController::class, 'process_cashout']);    
-
-    // callback urls
-    Route::post('deposits/store', [MpesaController::class, 'deposit']);
-    Route::post('cashouts/store', [MpesaController::class, 'cashout']);
+    Route::post('cashouts/process', [CashoutsController::class, 'process_cashout']);
 });
+   
+// callback urls
+Route::post('deposits/store', [MpesaController::class, 'deposit']);
+Route::post('cashouts/store', [MpesaController::class, 'cashout']);
