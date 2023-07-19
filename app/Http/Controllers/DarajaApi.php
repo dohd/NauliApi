@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Http;
 
 trait DarajaApi
 {
-    public $base_url = 'https://3d96-2c0f-fe38-2240-dda6-dd5d-df04-64d1-abfc.ngrok-free.app';
+    public $base_url = 'https://26b5-2c0f-fe38-2240-dda6-dd5d-df04-64d1-abfc.ngrok-free.app';
     public $api_headers = [
         'accept' => 'application/json',
         'content_type' => 'application/json',
@@ -14,6 +14,7 @@ trait DarajaApi
     public $api_endpoints = [
         'access_token' => 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials',
         'b2c_payment' => 'https://sandbox.safaricom.co.ke/mpesa/b2c/v1/paymentrequest',
+        'c2b_register_url' => 'https://sandbox.safaricom.co.ke/mpesa/c2b/v1/registerurl ',
     ];
 
     function getAccessToken() {
@@ -25,7 +26,7 @@ trait DarajaApi
         ->json();
     }
 
-    public function businessPayment($amount=1, $phone=254708374149) 
+    public function businessPayment($amount=1, $phone=254) 
     {
         $params = [
             "InitiatorName" => config('daraja.initiator_name'),

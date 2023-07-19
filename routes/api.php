@@ -38,10 +38,12 @@ Route::group(['middleware' => 'auth:api'], function () {
     Route::post('conductors', [ConductorsController::class, 'store']);
     
     // cashout process
+    Route::get('daraja_api/token', [CashoutsController::class, 'daraja_access_token']);
     Route::post('cashouts/otp', [CashoutsController::class, 'generate_otp']);
-    Route::post('cashouts/init', [CashoutsController::class, 'initiate_cashout']);
+    Route::post('cashouts/init', [MpesaController::class, 'initiate_cashout']);
 });
    
 // callback urls
+Route::post('deposits/validate', [MpesaController::class, 'validate_deposit']);
 Route::post('deposits/store', [MpesaController::class, 'deposit']);
 Route::post('cashouts/store', [MpesaController::class, 'cashout']);

@@ -2,6 +2,7 @@
 
 namespace App\Exceptions;
 
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
@@ -37,17 +38,22 @@ class Handler extends ExceptionHandler
      */
     public function register()
     {
-        // custom error handling
+        // custom error
         $this->reportable(function (CustomException $e) {
             return false;
         });
 
-        // http request exception handling 
+        // http request 
         $this->renderable(function (RequestException $e) {
             return response()->json(['message' => 'Network error! Please try again later'], 400);
         });
 
-        // laravel validation error handling 
+        // authentication 
+        $this->renderable(function (AuthenticationException $e) {
+            return response()->json(['message' => $e->getMessage()], 401);
+        });
+
+        // laravel validation 
         $this->renderable(function (ValidationException $e) {
             return response()->json([
                 'message' => 'The given data was invalid.',
@@ -55,14 +61,14 @@ class Handler extends ExceptionHandler
             ], 422);
         });
 
-        // default error handling
+        // default
         $this->reportable(function (Throwable $e) {
             $sys_message = $e->getMessage() . ' {user_id:'. @auth()->user()->id . '} at ' . $e->getFile() . ':' . $e->getLine();
             printLog($sys_message);
             Log::error($sys_message);
         });
         $this->renderable(function (Throwable $e) {
-            return response()->json(['message' => 'Oops! Something went wrong. Please try again later'], 500);
+            return response()->json(['message' => 'Something went wrong! Please try again later'], 500);
         });
     }
 }
