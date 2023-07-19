@@ -39,7 +39,7 @@ Route::group(['middleware' => 'auth:api'], function () {
     
     // cashout process
     Route::post('cashouts/otp', [CashoutsController::class, 'generate_otp']);
-    Route::post('cashouts/process', [CashoutsController::class, 'process_cashout']);
+    Route::post('cashouts/init', [CashoutsController::class, 'initiate_cashout']);
 });
    
 // callback urls

@@ -61,6 +61,7 @@ class Transaction extends Model
         parent::boot();
 
         static::addGlobalScope('owner_id', function ($builder) {
+            if (isset(auth()->user()->owner_id))
             $builder->where('owner_id', auth()->user()->owner_id);
         });
     }

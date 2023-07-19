@@ -6,47 +6,44 @@ use Illuminate\Support\Facades\Http;
 
 trait DarajaApi
 {
-    public $base_url = 'https://d943-197-248-216-91.ngrok-free.app';
+    public $base_url = 'https://3d96-2c0f-fe38-2240-dda6-dd5d-df04-64d1-abfc.ngrok-free.app';
     public $api_headers = [
         'accept' => 'application/json',
         'content_type' => 'application/json',
     ];
     public $api_endpoints = [
         'access_token' => 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials',
-        'business_payment' => 'https://sandbox.safaricom.co.ke/mpesa/b2c/v1/paymentrequest',
+        'b2c_payment' => 'https://sandbox.safaricom.co.ke/mpesa/b2c/v1/paymentrequest',
     ];
 
     function getAccessToken() {
         $this->api_headers['authorization'] = 'Basic ' . config('daraja.access_token_auth');
-        return Http::timeout(3)
+        return Http::timeout(5)
         ->withHeaders($this->api_headers)
         ->get($this->api_endpoints['access_token'])
         ->throw()
         ->json();
     }
 
-    // trigger B2C transaction (business payment)
-    public function businessPayment($amount=0, $phone=254708374149) 
+    public function businessPayment($amount=1, $phone=254708374149) 
     {
-        $response = $this->getAccessToken();
-        $this->api_headers['authorization'] = 'Bearer ' . $response['access_token'];
-
         $params = [
-            "InitiatorName" => "testapi",
+            "InitiatorName" => config('daraja.initiator_name'),
             "SecurityCredential" => config('daraja.security_credential'),
             "CommandID" => "BusinessPayment",
             "Amount" => $amount,
             "PartyA" => config('daraja.b2c_shortcode'),
             "PartyB" => $phone,
-            "Remarks" => "Test remarks",
+            "Remarks" => "Cashout Payment",
             "QueueTimeOutURL" => $this->base_url .  "/api/cashouts/store_timeout",
             "ResultURL" => $this->base_url .  "/api/cashouts/store",
-            "Occassion" => ""
+            "Occassion" => "Cashout"
         ];
-        
-        return Http::timeout(3)
+        $response = $this->getAccessToken();
+        $this->api_headers['authorization'] = 'Bearer ' . $response['access_token'];
+        return Http::timeout(5)
         ->withHeaders($this->api_headers)
-        ->post($this->api_endpoints['business_payment'], $params)
+        ->post($this->api_endpoints['b2c_payment'], $params)
         ->throw()
         ->json();
     }

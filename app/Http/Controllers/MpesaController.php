@@ -17,34 +17,33 @@ class MpesaController extends Controller
      */
     function cashout(Request $request)
     {
-        // $result = $this->dummyData()['cashout'];
-        return response()->json(['success' => 1, 'data' => $request->all()]);
+        $result = $request->Result;
+        $result_params = $result['ResultParameters']['ResultParameter'];
 
         $data = [
-            'conversation_id' => $result['ConversationId'],
-            'origin_conversation_id' => $result['OriginatorConversationId'],
-            'result_desc' => $result['ResultDesc'],
-            'result_type' => $result['ResultType'],
-            'result_code' => $result['ResultCode'],
+            'origin_conversation_id' => $result['OriginatorConversationID'],
+            'conversation_id' => $result['ConversationID'],
             'trans_id' => $result['TransactionID'],
-            'trans_receipt' => $result['TransactionReceipt'],
-            'trans_amount' => floatval($request->amount ?: $result['TransactionAmount']),
-            'working_account_balance' => (float) $result['B2CWorkingAccountAvailableFunds'],
-            'utility_account_balance' => (float) $result['B2CUtilityAccountAvailableFunds'],
-            'trans_completed_datetime' => $result['TransactionCompletedDateTime'],
-            'recepient_name' => $result['ReceiverPartyPublicName'],
-            'is_registered_customer' => $result['B2CRecipientIsRegisteredCustomer'],
         ];
+        foreach ($result_params as $param) {
+            $key = $param['Key'];
+            $value = $param['Value']; 
+            switch ($key) {
+                case 'TransactionAmount': $data['trans_amount'] = $value;
+                case 'TransactionReceipt': $data['trans_receipt'] = $value;
+                case 'ReceiverPartyPublicName': $data['recepient_name'] = $value;
+                case 'TransactionCompletedDateTime': $data['trans_completed_datetime'] = $value;
+                case 'B2CUtilityAccountAvailableFunds': $data['utility_account_balance'] = $value;
+                case 'B2CWorkingAccountAvailableFunds': $data['working_account_balance'] = $value;
+                case 'B2CRecipientIsRegisteredCustomer': $data['is_registered_customer'] = $value;
+                case 'B2CChargesPaidAccountAvailableFunds': $data['charges_paid_account_balance'] = $value;
+            }
+        }
 
         DB::beginTransaction();
 
-        $recepient_name = explode('-', $data['recepient_name']);
-        if (@$recepient_name[0]) {
-            $phone = trim($recepient_name[0]);
-            $user = User::where('phone', $phone)->first();
-            if ($user) $data['owner_id'] = $user->id;
-        }
-        $cashout = Cashout::create($data);
+        $cashout = Cashout::where('conversation_id', $data['conversation_id'])->first();
+        $cashout->update($data);
         
         // compute wallet balance
         $data = [
@@ -140,8 +139,8 @@ class MpesaController extends Controller
                 'LastName' => 'Garvey',
             ],
             'cashout' => [
-                'ConversationId' => ' 236543-276372-2',
-                'OriginatorConversationId' => ' AG_2376487236_126732989KJHJKH ',
+                'ConversationID' => 'AG_2376487236_126732989KJHJKH',
+                'OriginatorConversationID' => '236543-276372-2',
                 'ResultDesc' => 'Service request is has bee accepted successfully',
                 'ResultType' => '0',
                 'ResultCode' => '0',

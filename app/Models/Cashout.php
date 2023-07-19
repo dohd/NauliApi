@@ -56,7 +56,8 @@ class Cashout extends Model
         parent::boot();
 
         static::addGlobalScope('owner_id', function ($builder) {
-            $builder->where('owner_id', auth()->user()->owner_id);
+            if (isset(auth()->user()->owner_id))
+                $builder->where('owner_id', auth()->user()->owner_id);
         });
     }
 
