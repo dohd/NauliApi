@@ -18,7 +18,8 @@ class MpesaController extends Controller
      * Initiate Cashout
      * 
      */
-    public function initiate_cashout(Request $request) {
+    public function initiate_cashout(Request $request) 
+    {
         $request->validate(['amount' => 'required']);
 
         // verify otp
@@ -108,8 +109,8 @@ class MpesaController extends Controller
     {
         $result = $request->all();
 
-        $user_exists = User::where('username', $result['bill_ref_number'])->exists();
-        if (!$user_exists) {
+        $user = User::where('username', $result['BillRefNumber'])->first();
+        if (!$user) {
             // C2B00012 invalid account number error code
             $data['ResultCode'] = 'C2B00012';
             $data['ResultDesc'] = 'Rejected';
@@ -117,12 +118,13 @@ class MpesaController extends Controller
         }
 
         $deposit = Deposit::create([
+            'owner_id' => $user->id,
             'trans_type' => $result['TransactionType'],
             'trans_id' => $result['TransID'],
             'trans_time' => $result['TransTime'],
             'trans_amount' => (float) $result['TransAmount'],
             'bill_ref_number' => $result['BillRefNumber'],
-            'msisdn' => $result['MSISDN'],
+            'msisdn' => substr($result['MSISDN'], 0, 12),
         ]);
 
         return response()->json([
@@ -138,13 +140,13 @@ class MpesaController extends Controller
     function deposit(Request $request)
     {
         $result = $request->all();
-            
+        
         $data = [
             'trans_id' => $result['TransID'],
             'invoice_number' => $result['InvoiceNumber'],
             'org_account_balance' => (float) $result['OrgAccountBalance'],
             'thirdparty_trans_id' => $result['ThirdPartyTransID'],
-            'msisdn' => $result['MSISDN'],
+            'msisdn' => substr($result['MSISDN'], 0, 12),
             'first_name' => $result['FirstName'],
             'middle_name' => $result['MiddleName'],
             'last_name' => $result['LastName'],
@@ -178,39 +180,5 @@ class MpesaController extends Controller
         DB::commit();
         
         return response()->json($deposit);
-    }
-
-    public function dummyData() {
-        return [
-            'deposit' => [
-                'TransactionType' => 'Pay Bill',
-                'TransID' => 'RKTQDM7W6S',
-                'TransTime' => '20191122063845',
-                'TransAmount' => '100',
-                'BusinessShortCode' => '600638',
-                'BillRefNumber' => 'john_doe',
-                'OrgAccountBalance' => '',
-                'ThirdPartyTransID' => '',
-                'MSISDN' => '2547' . rand(10000000, 99999999),
-                'FirstName' => 'Marcus',
-                'MiddleName' => '',
-                'LastName' => 'Garvey',
-            ],
-            'cashout' => [
-                'ConversationID' => 'AG_2376487236_126732989KJHJKH',
-                'OriginatorConversationID' => '236543-276372-2',
-                'ResultDesc' => 'Service request is has bee accepted successfully',
-                'ResultType' => '0',
-                'ResultCode' => '0',
-                'TransactionID' => 'LHG31AA5TX',
-                'TransactionReceipt' => 'LHG31AA5TX',
-                'TransactionAmount' => '400',
-                'B2CWorkingAccountAvailableFunds' => '20000',
-                'B2CUtilityAccountAvailableFunds' => ' 25000',
-                'TransactionCompletedDateTime' => '01.08.2018 16:12:12',
-                'ReceiverPartyPublicName' => '254720020022 - John Doe',
-                'B2CRecipientIsRegisteredCustomer' => 'Y',
-            ]
-        ];
     }
 }

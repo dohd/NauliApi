@@ -10,7 +10,6 @@ trait DarajaApi
     public $api_endpoints = [
         'access_token' => 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials',
         'b2c_payment' => 'https://sandbox.safaricom.co.ke/mpesa/b2c/v1/paymentrequest',
-        'c2b_register_url' => 'https://sandbox.safaricom.co.ke/mpesa/c2b/v1/registerurl ',
     ];
     
     public $api_headers = [
