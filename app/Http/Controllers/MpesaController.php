@@ -74,7 +74,7 @@ class MpesaController extends Controller
         DB::beginTransaction();
 
         $cashout = Cashout::where('conversation_id', $data['conversation_id'])->first();
-        if (!$cashout) throw new CustomException('Transaction could not be found!');
+        if (!$cashout) throw new CustomException('Invalid transaction!');
         $cashout->update($data);
         
         // compute wallet balance
@@ -153,7 +153,7 @@ class MpesaController extends Controller
         DB::beginTransaction();
 
         $deposit = Deposit::where('trans_id', $data['trans_id'])->first();
-        if (!$deposit) throw new CustomException('Transaction could not be found!');
+        if (!$deposit) throw new CustomException('Invalid transaction!');
         $deposit->update($data);
 
         // compute wallet balance

@@ -38,7 +38,7 @@ Route::group(['middleware' => 'auth:api'], function () {
     Route::post('conductors', [ConductorsController::class, 'store']);
     
     // cashout process
-    Route::get('daraja_api/token', [CashoutsController::class, 'daraja_access_token']);
+    Route::get('daraja/access_token', [CashoutsController::class, 'daraja_access_token']);
     Route::post('cashouts/otp', [CashoutsController::class, 'generate_otp']);
     Route::post('cashouts/init', [MpesaController::class, 'initiate_cashout']);
 });
