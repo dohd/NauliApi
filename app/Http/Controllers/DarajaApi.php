@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\Http;
 
 trait DarajaApi
 {
-    public $base_url = 'https://0e9a-197-248-216-91.ngrok-free.app';
     public $api_endpoints = [
         'access_token' => 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials',
         'b2c_payment' => 'https://sandbox.safaricom.co.ke/mpesa/b2c/v1/paymentrequest',
@@ -18,7 +17,7 @@ trait DarajaApi
     ];
 
     function getAccessToken() {
-        $this->api_headers['authorization'] = 'Basic ' . config('daraja.access_token_auth');
+        $this->api_headers['authorization'] = 'Basic ' . config('daraja.authorization');
         return Http::timeout(5)
         ->withHeaders($this->api_headers)
         ->get($this->api_endpoints['access_token'])
@@ -37,7 +36,7 @@ trait DarajaApi
             'PartyB' => $phone,
             'Remarks' => 'Cashout Payment',
             'QueueTimeOutURL' => '',
-            'ResultURL' => $this->base_url .  '/api/cashouts/store',
+            'ResultURL' => env('API_BASE_URL') .  '/api/cashouts/store',
             'Occassion' => 'Cashout'
         ];
         $response = $this->getAccessToken();
