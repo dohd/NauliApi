@@ -14,7 +14,7 @@ class CashoutsController extends Controller
      * Cashout pre-confirmation OTP code
      * 
      */
-    public function generate_otp(Request $request) 
+    public function cashout_otp(Request $request) 
     {     
         if (Auth::user()->rel_id) throw new CustomException('Unauthorized', 401);
 
