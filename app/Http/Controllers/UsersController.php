@@ -52,12 +52,27 @@ class UsersController extends Controller
      */
     public function deposits(Request $request, $user) 
     {
+        if ($request->reload) $this->update_deposit($request, $user);
+            
         $deposits = Deposit::get([
             'id', 'owner_id', 'first_name', 'middle_name', 'last_name', 'msisdn', 
             'trans_amount', 'created_at'
         ]);
 
         return response()->json($deposits);
+    }
+
+    /**
+     * Update Deposit Transaction
+     */
+    public function update_deposit(Request $request, $user) 
+    {
+        $deposit = Deposit::latest()->first();
+        printLog($deposit->toArray());
+        // validate
+        // check transaction status
+        // update deposit transaction
+        return true;
     }
 
     /**
