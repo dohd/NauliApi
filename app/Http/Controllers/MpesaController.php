@@ -75,7 +75,7 @@ class MpesaController extends Controller
         DB::beginTransaction();
 
         $cashout = Cashout::where('conversation_id', $data['conversation_id'])->first();
-        if (!$cashout) throw new CustomException('Invalid transaction!');
+        if (!$cashout) throw new CustomException('Transaction could not be found! Try again later.');
         $cashout->update($data);
         
         // compute wallet balance
@@ -104,6 +104,7 @@ class MpesaController extends Controller
 
     /**
      * Validate Deposit
+     * 
      */
     function validate_deposit(Request $request)
     {
@@ -116,7 +117,7 @@ class MpesaController extends Controller
             $data['ResultDesc'] = 'Rejected';
             return response()->json($data);
         }
-
+        
         $deposit = Deposit::create([
             'owner_id' => $user->id,
             'trans_type' => $result['TransactionType'],
@@ -130,6 +131,7 @@ class MpesaController extends Controller
         return response()->json([
             'ResultCode' => '0',
             'ResultDesc' => 'Accepted',
+            'data' => $result,
         ]);
     }
 
@@ -155,7 +157,7 @@ class MpesaController extends Controller
         DB::beginTransaction();
 
         $deposit = Deposit::where('trans_id', $data['trans_id'])->first();
-        if (!$deposit) throw new CustomException('Invalid transaction!');
+        if (!$deposit) throw new CustomException('Transaction could not be found. Try again later.');
         $deposit->update($data);
 
         // compute wallet balance
@@ -180,5 +182,31 @@ class MpesaController extends Controller
         DB::commit();
         
         return response()->json($deposit);
+    }
+
+    /**
+     * Transaction Status
+     */
+    function transaction_status(Request $request)
+    {
+        $result = $this->transactionStatus([
+            'transaction_id' => '',
+            'party' => '',
+            'identifier_type' => 1,
+            'remark' => '',
+            'occassion' => '',
+        ]);
+
+        return response()->json($result);
+    }
+
+    /**
+     * Transaction Status Result
+     */
+    function status_result(Request $request)
+    {
+        $result = $request->Result;
+
+        return response()->json($result);
     }
 }
