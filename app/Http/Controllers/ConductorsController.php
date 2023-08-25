@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Exceptions\CustomException;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class ConductorsController extends Controller
 {
@@ -18,7 +17,7 @@ class ConductorsController extends Controller
         $name = $request->name;
         $phone = $request->phone;
 
-        if (Auth::user()->rel_id) throw new CustomException('Unauthorized!', 401);
+        if (auth()->user()->rel_id) throw new CustomException('Unauthorized!', 401);
         
         $phone_exists = User::where('phone', $phone)->exists();
         if ($phone_exists) throw new CustomException('Phone Number exists! Try a different number.', 409);
@@ -44,6 +43,7 @@ class ConductorsController extends Controller
         $password = substr(str_shuffle($chars), 0, 5);
 
         $user = User::create([
+            'rel_id' => auth()->user()->id,
             'name' => $name,
             'phone' => $phone,
             'username' => $username,
@@ -65,23 +65,42 @@ class ConductorsController extends Controller
         $phone = $request->phone;
         $username = $request->username;
         $password = $request->password;
-        
+                
         if ($name) {
-            if ($user->rel_id) throw new CustomException('Unauthorized', 401);
+            if (auth()->user()->rel_id) throw new CustomException('Unauthorized', 401);
             $updated = $user->update(compact('name'));
-        } elseif ($phone) {
-            if ($user->rel_id) throw new CustomException('Unauthorized', 401);
+        } 
+        if ($phone) {
+            if (auth()->user()->rel_id) throw new CustomException('Unauthorized', 401);
             $exists = User::where('id', '!=', $user->id)->where('phone', $phone)->exists();
             if ($exists) throw new CustomException('Phone Number exists! Try a different phone number.', 409);
             $updated = $user->update(compact('phone'));
-        } elseif ($username) {
+            printLog($phone, $user->toArray());
+        } 
+        if ($username) {
             $exists = User::where('id', '!=', $user->id)->where('username', $username)->exists();
             if ($exists) throw new CustomException('Username exists! Try a different username.', 409);
             $updated = $user->update(compact('username'));
-        } elseif ($password) {
+        } 
+        if ($password) {
             $updated = $user->update(compact('password'));
         }
         
         return response()->json(['message' => 'User updated successfully']);
+    }
+
+    /**
+     * Update Conductor Active Status
+     * 
+     */
+    public function update_status(Request $request) 
+    {   
+        if (auth()->user()->rel_id) throw new CustomException('Unauthorized!', 401);
+
+        $user = User::find($request->user_id);
+        if (!$user) throw new CustomException('User could not be found!', 400);
+        $user->update(['active' => $request->status]);
+        
+        return response()->json(['message' => 'User status updated successfully']);
     }
 }
