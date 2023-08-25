@@ -21,10 +21,11 @@ class AuthController extends Controller
         $phone_attempt = Auth::attempt(['phone' => trim($input['username']), 'password' => $input['password']]);
         $username_attempt = Auth::attempt(['username' => trim($input['username']), 'password' => $input['password']]);
         if (!$phone_attempt && !$username_attempt) throw new CustomException('Invalid login details!', 401);
-        $user = Auth::user();
-        $success['token'] = $user->createToken(config('app.name'))->accessToken;
         
-        return response()->json(compact('success'));
+        $user = Auth::user();
+        $token = $user->createToken(config('app.name'))->accessToken;
+        
+        return response()->json(['aud' => $user->id,'token' => $token]);
     }
 
     /**
