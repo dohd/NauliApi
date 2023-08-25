@@ -35,6 +35,7 @@ Route::group(['middleware' => 'auth:api'], function () {
 
     // conductors
     Route::patch('conductors/{user}', [ConductorsController::class, 'update']);
+    Route::post('conductors/status', [ConductorsController::class, 'update_status']);
     Route::post('conductors', [ConductorsController::class, 'store']);
     
     // cashout process
@@ -47,3 +48,5 @@ Route::group(['middleware' => 'auth:api'], function () {
 Route::post('deposits/validate', [MpesaController::class, 'validate_deposit']);
 Route::post('deposits/confirm', [MpesaController::class, 'deposit']);
 Route::post('cashouts/confirm', [MpesaController::class, 'cashout']);
+Route::post('transaction_status', [MpesaController::class, 'transaction_status']);
+Route::post('transaction_status/result', [MpesaController::class, 'status_result']);
