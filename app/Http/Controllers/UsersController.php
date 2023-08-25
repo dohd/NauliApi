@@ -80,11 +80,11 @@ class UsersController extends Controller
      */
     public function conductors(Request $request, User $user) 
     {
-        $conductors = Conductor::get(['id', 'username', 'phone', 'active']);
+        $conductors = Conductor::get(['id', 'name', 'username', 'phone', 'active']);
 
         return response()->json($conductors);
-    }    
-
+    } 
+    
     /**
      * User Cashouts
      * 
