@@ -31,6 +31,7 @@ Route::group(['middleware' => 'auth:api'], function () {
     Route::get('users/{user}/balance', [UsersController::class, 'wallet_balance']);
     Route::get('users/{user}/deposits', [UsersController::class, 'deposits']);
     Route::get('users/{user}/cashouts', [UsersController::class, 'cashouts']);
+    Route::get('users/{user}', [UsersController::class, 'show']);
     Route::patch('users/{user}', [UsersController::class, 'update']);
 
     // conductors

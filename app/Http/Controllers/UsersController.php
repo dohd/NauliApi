@@ -13,34 +13,48 @@ use Illuminate\Http\Request;
 class UsersController extends Controller
 {
     use DarajaApi;
+
+    /**
+     * Show Auth User
+     */
+    public function show(Request $request, User $user) 
+    {
+        $user = auth()->user();
+        return response()->json($user);
+    }
+
     /**
      * Update User Resource
      * 
      */
     public function update(Request $request, User $user) 
     {
-        if ($user->rel_id) throw new CustomException('Unauthorized');
+        if ($user->rel_id) throw new CustomException('Unauthorized', 401);
 
         $name = $request->name;
         $username = $request->username;
         $phone = $request->phone;
+        $current_password = $request->current_password;
         $password = $request->password;
 
         if ($username) {
-            $exists = User::where('id', '!=', $user->id)
-                ->where('username', 'LIKE', "%{$username}%")
+            $exists = User::where('id', '!=', $user->id)->where('username', 'LIKE', "%{$username}%")
                 ->exists();
             if ($exists) throw new CustomException('Username exists! Try a different name.', 409);
             $updated = $user->update(compact('username'));
-        } elseif ($phone) {
-            $exists = User::where('id', '!=', $user->id)
-                ->where('phone', $phone)
+        }
+        if ($phone) {
+            $exists = User::where('id', '!=', $user->id)->where('phone', $phone)
                 ->exists();
             if ($exists) throw new CustomException('Phone Number exists! Try a different number.', 409);
             $updated = $user->update(compact('phone'));
-        } elseif ($name) {
+        } 
+        if ($name) {
             $updated = $user->update(compact('name'));
-        } elseif ($password) {
+        } 
+        if ($password) {
+            if (!password_verify($current_password, $user->password))
+                throw new CustomException('Invalid password', 401);
             $updated = $user->update(compact('password'));
         }
 
@@ -89,7 +103,8 @@ class UsersController extends Controller
      * User Cashouts
      * 
      */
-    public function cashouts(Request $request) {
+    public function cashouts(Request $request) 
+    {
         $cashouts = Cashout::get(['id', 'owner_id', 'trans_amount', 'created_at']);
 
         return response()->json($cashouts);
