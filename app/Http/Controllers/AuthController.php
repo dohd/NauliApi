@@ -6,6 +6,7 @@ use App\Exceptions\CustomException;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -21,11 +22,18 @@ class AuthController extends Controller
         $phone_attempt = Auth::attempt(['phone' => trim($input['username']), 'password' => $input['password']]);
         $username_attempt = Auth::attempt(['username' => trim($input['username']), 'password' => $input['password']]);
         if (!$phone_attempt && !$username_attempt) throw new CustomException('Invalid login details!', 401);
+        $token = auth()->user()->createToken(config('app.name'))->accessToken;
         
-        $user = Auth::user();
-        $token = $user->createToken(config('app.name'))->accessToken;
-        
-        return response()->json(['aud' => $user->id,'token' => $token]);
+        return response()->json(['aud' => auth()->user()->id,'token' => $token]);
+    }
+
+    /**
+     * Logout
+     */
+    public function logout(Request $request) 
+    {
+        DB::table('oauth_access_tokens')->where('user_id', auth()->user()->id)->delete();
+        return response()->json(['message' => 'Successfully logged out']);
     }
 
     /**
