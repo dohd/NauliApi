@@ -66,7 +66,10 @@ class AuthController extends Controller
             }
             if ($username_exists) $username = strtolower($username[1][0]) . $mod_1 . rand(10, 999);
         } 
-        if (is_array($username)) $username = strtolower($username[0]);
+        if (is_array($username)) {
+            if (count($username) > 1) $username = strtolower($username[0]) . '_' . strtolower($username[1]);
+            else $username = strtolower($username[0]);
+        }
 
         // generate random password
         $chars = 'qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890';
@@ -81,9 +84,9 @@ class AuthController extends Controller
             'username' => $username,
             'password' => $input['password'],
         ]);
-        $success['token'] = $user->createToken(config('app.name'))->accessToken;
+        $token = $user->createToken(config('app.name'))->accessToken;
 
-        return response()->json($success);
+        return response()->json(['aud' => $user->id, 'token' => $token]);
     }
 
     /**
@@ -91,17 +94,17 @@ class AuthController extends Controller
      * 
      */
     public function password_forgot_otp(Request $request) 
-    {
+    {   printLog(request()->all());
         $request->validate(['username' => 'required']);
     
         $user = User::where('username', $request->username)
             ->orWhere('phone', $request->username)->first();
         if (!$user) throw new CustomException('Username or Phone Number could not be found!', 401);
 
-        // otp expiry 120 seconds
+        // otp expiry 180 seconds
         $user->update([
             'pass_reset_otp' => rand(100000, 999999), 
-            'reset_otp_exp' => date('Y-m-d H:i:s', strtotime(date("Y-m-d H:i:s")) + 120),
+            'pass_otp_exp' => date('Y-m-d H:i:s', strtotime(date("Y-m-d H:i:s")) + 180),
         ]);
 
         // send otp using sms service
@@ -115,11 +118,10 @@ class AuthController extends Controller
      */
     public function password_reset(Request $request) 
     {
-        $request->validate(['password' => 'required', 'otp' => 'required']);
+        $request->validate(['password' => 'required', 'otp_code' => 'required']);
     
-        $user = User::where('pass_reset_otp', $request->otp)->first();
+        $user = User::where('pass_reset_otp', $request->otp_code)->first();
         if (!$user) throw new CustomException('Invalid OTP code!');
-
         // verify otp expiry
         $exp_diff = strtotime(date('Y-m-d H:i:s')) - strtotime($user->pass_otp_exp);
         if ($exp_diff > 0) throw new CustomException('Expired OTP code.');
