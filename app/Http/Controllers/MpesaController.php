@@ -21,25 +21,25 @@ class MpesaController extends Controller
     public function initiate_cashout(Request $request) 
     {
         $request->validate(['amount' => 'required']);
-
+        
         // verify otp
-        // if ($request->otp != auth()->user()->withdraw_otp) throw new CustomException('Invalid OTP code.');
+        // if ($request->otp_code != auth()->user()->withdraw_otp) throw new CustomException('Invalid OTP code.');
         // $exp_diff = strtotime(date('Y-m-d H:i:s')) - strtotime(auth()->user()->withdraw_otp_exp);
         // if ($exp_diff > 0) throw new CustomException('Expired OTP code.');
         
-        $user = User::find(auth()->user()->owner_id);
-        if (!$user) throw new CustomException('Unauthorized', 401);
+        if (!password_verify($request->password, auth()->user()->password))
+            throw new CustomException('Invalid password!', 401);
 
-        $response = $this->businessPayment($request->amount, $user->phone);
-        Cashout::create([
-            'owner_id' => $user->id,
-            'conversation_id' => $response['ConversationID'],
-            'origin_conversation_id' => $response['OriginatorConversationID'],
-        ]);
+        // $response = $this->businessPayment($request->amount, $user->phone);
+        // Cashout::create([
+        //     'owner_id' => $user->id,
+        //     'conversation_id' => $response['ConversationID'],
+        //     'origin_conversation_id' => $response['OriginatorConversationID'],
+        // ]);
         
         return response()->json([
             'message' => 'Cashout process initiated successfully',
-            'data' => $response,
+            // 'data' => $response,
         ]);
     }
     
