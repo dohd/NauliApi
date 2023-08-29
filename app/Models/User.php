@@ -39,6 +39,10 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'pass_reset_otp',
+        'pass_otp_exp',
+        'withdraw_otp',
+        'withdraw_otp_exp'
     ];
 
     /**
