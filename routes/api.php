@@ -26,9 +26,8 @@ Route::post('password/forgot', [AuthController::class, 'password_forgot_otp']);
 Route::post('password/reset', [AuthController::class, 'password_reset']);
 
 Route::group(['middleware' => 'auth:api'], function () {
-    // logout
     Route::post('logout', [AuthController::class, 'logout']);
-
+    
     // users
     Route::get('users/{user}/conductors', [UsersController::class, 'conductors']);
     Route::get('users/{user}/balance', [UsersController::class, 'wallet_balance']);
